@@ -17,6 +17,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
+           terraform_version: 1.8.5 
       # Terraform Cloud token (run before init)
       - name: Configure Terraform Cloud token
         if: ${{ env.TF_API_TOKEN != '' }}
