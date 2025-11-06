@@ -8,54 +8,48 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    env:
-      TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-           terraform_version: 1.8.5 
-      # Terraform Cloud token (run before init)
-      - name: Configure Terraform Cloud token
-        if: ${{ env.TF_API_TOKEN != '' }}
+          terraform_version: 1.8.5
+
+        
+        # Manually configure Terraform credentials
+      - name: Configure Terraform credentials manually
         run: |
           mkdir -p ~/.terraform.d
-          cat > ~/.terraform.d/credentials.tfrc.json <<EOF
-          {
-            "credentials": {
-              "app.terraform.io": {
-                "token": "${TF_API_TOKEN}"
-              }
-            }
-          }
-          EOF
-          }
-          EOF
+          echo '{"credentials":{"app.terraform.io":{"token":"${{ secrets.TF_API_TOKEN }}"}}}' > ~/.terraform.d/credentials.tfrc.json
 
-      # AWS creds for provider
+      - name: Debug Terraform credentials
+        run: |
+          echo "Listing ~/.terraform.d"
+          ls -la ~/.terraform.d
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: terraform plan
+        env:
+          TF_VAR_aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          TF_VAR_aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}    
+        
+
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Terraform Init
-        run: terraform init -input=false
-
-      - name: Terraform Validate
-        run: terraform validate
-
-      - name: Terraform Plan
-        run: terraform plan -input=false
-        env:
-          TF_VAR_region: ${{ secrets.AWS_REGION }}  # matches var.region
+          aws-region: ${{ secrets.AWS_REGION }}  
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve -input=false
+        run: terraform apply -auto-approve
         env:
-          TF_VAR_region: ${{ secrets.AWS_REGION }}
+          TF_VAR_aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          TF_VAR_aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }} 
 
