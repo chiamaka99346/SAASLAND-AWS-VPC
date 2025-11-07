@@ -31,7 +31,7 @@ resource "aws_instance" "server" {
   subnet_id                   = aws_subnet.private-subnet[0].id
   vpc_security_group_ids      = [aws_security_group.sg_server.id]
   associate_public_ip_address = false
-  key_name                    = var.key_name
+  
 
   user_data = <<-EOF
               #!/bin/bash
@@ -56,7 +56,7 @@ resource "aws_instance" "haproxy" {
   subnet_id                   = aws_subnet.public-subnet[0].id
   vpc_security_group_ids      = [aws_security_group.sg_haproxy.id]
   associate_public_ip_address = true
-  key_name                    = var.key_name
+  
 
   user_data = <<-EOF
               #!/bin/bash

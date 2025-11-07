@@ -13,3 +13,5 @@ override.tf.json
 .DS_Store
 *.zip
 *.exe
+*.pem
+*.key

@@ -51,3 +51,13 @@ variable "allowed_ssh_cidr" {
   type        = string
   default     = "0.0.0.0/0"
 }
+
+variable "ami" {
+  description = "The AMI ID to use for launching the EC2 instance"
+  type        = string
+}
+
+variable "subnet_id" {
+  description = "The subnet ID where the EC2 instance will be created"
+  type        = string
+}
