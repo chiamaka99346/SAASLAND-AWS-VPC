@@ -13,10 +13,12 @@ output "security_group_id" {
   value       = aws_security_group.main_vpc_sg.id
 }
 
+# outputs.tf
 output "vpc_id" {
-  description = "The ID of the created VPC"
   value       = aws_vpc.main_vpc.id
+  description = "ID of the main VPC created by this module"
 }
+
 
 output "ec2_id" {
   description = "The ID of the EC2 instance"
