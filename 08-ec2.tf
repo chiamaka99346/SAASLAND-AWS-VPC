@@ -1,70 +1,45 @@
-data "aws_ami" "amazon_linux_2" {
+# ... (Data source for ubuntu AMI remains the same)
+data "aws_ami" "ubuntu" {
   most_recent = true
-  owners      = ["amazon"]
-
   filter {
     name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-*"] # allows gp2/gp3
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
   }
+  owners = ["062266257890"] # Canonical owner ID
 }
 
-# App server (private subnet)
-resource "aws_instance" "server" {
-  ami                         = data.aws_ami.amazon_linux_2.id
-  instance_type               = var.instance_type
-  subnet_id                   = aws_subnet.private_subnet[0].id   # was private-subnet
-  vpc_security_group_ids      = [aws_security_group.sg_server.id]
-  associate_public_ip_address = false
-  key_name                    = aws_key_pair.this.key_name        # use the generated key
+resource "tls_private_key" "example" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
 
-  user_data = <<-EOF
-              #!/bin/bash
-              yum update -y
-              yum install -y httpd
-              echo "<html><body><h1>App server</h1></body></html>" > /var/www/html/index.html
-              systemctl enable httpd
-              systemctl start httpd
-              EOF
+resource "aws_key_pair" "generated_key" {
+  key_name   = var.key_name
+  public_key = tls_private_key.example.public_key_openssh
+}
+
+# Add a resource to save the private key locally
+# This is sensitive and will be masked in output logs.
+resource "local_sensitive_file" "private_key_file" {
+  content  = tls_private_key.example.private_key_pem
+  filename = var.key_name # Saves as "terraform-generated-key" in your directory
+  # Set file permissions to be secure for a private key (read/write for owner only)
+  file_permission = "0600" 
+}
+
+# Create the EC2 instance
+resource "aws_instance" "app_server" {
+  ami           = data.aws_ami.ubuntu.id
+  instance_type = "t2.micro" 
+  subnet_id     = aws_subnet.public_subnet[0].id # Requires aws_subnet.public resource
+  
+  # Associate the key pair with the instance using its name
+  key_name = aws_key_pair.generated_key.key_name 
+
+  # Associate the security group created above
+  vpc_security_group_ids = [aws_security_group.main_vpc_sg.id] # Requires aws_security_group.main_vpc_sg resource
 
   tags = {
-    Name = "${var.main_vpc}-server"                                # was main-vpc
+    Name = "var.main_vpc_ec2"
   }
 }
-
-# HAProxy instance (public subnet)
-resource "aws_instance" "haproxy" {
-  ami                         = data.aws_ami.amazon_linux_2.id
-  instance_type               = var.instance_type
-  subnet_id                   = aws_subnet.public_subnet[0].id     # was public-subnet
-  vpc_security_group_ids      = [aws_security_group.sg_haproxy.id]
-  associate_public_ip_address = true
-  key_name                    = aws_key_pair.this.key_name         # same key
-
-  user_data = <<-EOF
-              #!/bin/bash
-              yum update -y
-              yum install -y haproxy
-              cat > /etc/haproxy/haproxy.cfg <<CFG
-              global
-                  daemon
-                  maxconn 256
-              defaults
-                  mode http
-                  timeout connect 5000ms
-                  timeout client 50000ms
-                  timeout server 50000ms
-              frontend http_front
-                  bind *:80
-                  default_backend http_back
-              backend http_back
-                  server app1 ${aws_instance.server.private_ip}:80 check
-              CFG
-              systemctl enable haproxy
-              systemctl restart haproxy
-              EOF
-
-  tags = {
-    Name = "${var.main_vpc}-haproxy"
-  }
-}
-
