@@ -61,3 +61,15 @@ variable "subnet_id" {
   description = "The subnet ID where the EC2 instance will be created"
   type        = string
 }
+# VPC or project name prefix for tagging
+variable "main_vpc" {
+  description = "Main VPC or project name prefix used for tagging AWS resources"
+  type        = string
+}
+
+# Environment tag (optional, e.g., dev, staging, prod)
+variable "environment" {
+  description = "Deployment environment tag (e.g., dev, staging, prod)"
+  type        = string
+  default     = "dev"
+}
