@@ -55,16 +55,19 @@ variable "allowed_ssh_cidr" {
 variable "ami" {
   description = "The AMI ID to use for launching the EC2 instance"
   type        = string
+  default     = "ami-0c02fb55956c7d316" # Amazon Linux 2 AMI in us-east-1
 }
 
 variable "subnet_id" {
   description = "The subnet ID where the EC2 instance will be created"
   type        = string
+  default     = "aws_subnet.public-subnet[0].id"
 }
 # VPC or project name prefix for tagging
 variable "main_vpc" {
   description = "Main VPC or project name prefix used for tagging AWS resources"
   type        = string
+  default     = "main-vpc"
 }
 
 # Environment tag (optional, e.g., dev, staging, prod)
